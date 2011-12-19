@@ -9,13 +9,28 @@ import sys
 import os
 import random
 import itertools
+from argparse import ArgumentParser
 
+parser = ArgumentParser(description='play tron')
 
-size = (30,79) #(y,x)
-timestep = 0.07
+parser.add_argument('players',help='number of players (2 to 4)', metavar='n',type=int,default=2,nargs='?')
+parser.add_argument('-t','--timestep',help='set time between steps',metavar='time',default=0.07,type=float)
+parser.add_argument('-r',help='use random starting points',action='store_true', default=False)
+args = parser.parse_args()
+args = vars(args)
+
+#Setup parsed 
+timestep = args['timestep']
 minstep = 0.05
+if timestep < minstep:
+    timestep = minstep
+random_positions = args['r']
+playernum = args['players']
+if type(playernum) == 'list':
+    playernum = playernum[0]
 alpha = 0.001 #Growth Factor
-random_positions = True
+
+
 keys = [ curses.KEY_UP, curses.KEY_RIGHT, curses.KEY_DOWN, curses.KEY_LEFT,
 #Spieler 1, Pfeiltasten
          119,100,115,97, #WDSA
@@ -31,6 +46,7 @@ def countdown():
     screen.addstr(halfy,halfx-2,'    333')
     screen.addstr(halfy+1,halfx-2,'333333 ')
     screen.refresh()
+    step()
     time.sleep(1)
     screen.addstr(halfy-3,halfx-2,' 2222  ')
     screen.addstr(halfy-2,halfx-2,'222222 ')
@@ -38,6 +54,7 @@ def countdown():
     screen.addstr(halfy,halfx-2,' 2222  ')
     screen.addstr(halfy+1,halfx-2,'2222222')
     screen.refresh()
+    step()
     time.sleep(1)
     screen.addstr(halfy-3,halfx-2,'   1   ')
     screen.addstr(halfy-2,halfx-2,'  111  ')
@@ -45,6 +62,7 @@ def countdown():
     screen.addstr(halfy,halfx-2,'   11  ')
     screen.addstr(halfy+1,halfx-2,'  111  ')
     screen.refresh()
+    step()
     time.sleep(1)
     screen.addstr(halfy-3,halfx-2,'       ')
     screen.addstr(halfy-2,halfx-2,'       ')
@@ -53,7 +71,6 @@ def countdown():
     screen.addstr(halfy+1,halfx-2,'       ')
     screen.refresh()
     
-
 def debug(*args):
     f = open('log','a')
     for i in args:
@@ -69,7 +86,7 @@ def add(t1,t2): #tupel komponentenweise addieren
 class NullDevice():
     def write(self,s):
         pass
-#sys.stderr = NullDevice() #faktisch stderr ausschalten
+sys.stderr = NullDevice() #faktisch stderr ausschalten
 
 class Spieler():
     def __init__(self,pos,direction,color):
@@ -87,8 +104,6 @@ class Spieler():
             screen.addstr(self.pos[0],self.pos[1], self.char,curses.color_pair(self.color))
             besetzt.append(self.pos) # wachsen
             self.block = False # eine Aktion pro Step
-            #danach collision tests
-
 
     def collision(self,besetzt):
         if self.pos[0] == 0 or self.pos[0] == size[0]-2:
@@ -115,7 +130,7 @@ def distance(pos1,pos2):
 
 def randomstarts(num):
     mindistance = int(math.sqrt(size[0]*size[1]) / 5) #recht willkuerlich
-    mindistedge = int(math.sqrt(size[0]*size[1]) / 10) # auch recht willkuerlich
+    mindistedge = int(math.sqrt(size[0]*size[1]) / 5) # auch recht willkuerlich
     ok = False
     while not ok:
         positions = []
@@ -173,7 +188,7 @@ def init(stdscr):
     global halfy
     global score
     try:
-        score = [0]*int(sys.argv[1])
+        score = [0]*playernum
     except IndexError:
         score = [0,0]
     size = os.popen('stty size', 'r').read().split()
@@ -207,13 +222,13 @@ def main():
     screen.box()
     screen.refresh()
     try:
-        spieler = playersetup(int(sys.argv[1]))
+        spieler = playersetup(playernum)
     except IndexError:
         spieler = playersetup(2)
     status()
     besetzt = []
-    for i in range(3):
-        step()
+    #for i in range(3):
+    #    step()
     countdown()
     stepper.start()
     c = ''
@@ -283,7 +298,7 @@ if __name__=='__main__':
       # where no buffering is performed on keyboard input
       curses.noecho()
       curses.cbreak()
-      #curses.curs_set(0)
+      curses.curs_set(0)
       
 
       #add color:
@@ -303,7 +318,7 @@ if __name__=='__main__':
       # Set everything back to normal
       stdscr.keypad(0)
       curses.echo()
-      #curses.curs_set(1)
+      curses.curs_set(1)
       curses.nocbreak()
       curses.endwin()                 # Terminate curses
   except:
@@ -312,4 +327,5 @@ if __name__=='__main__':
       curses.echo()
       curses.nocbreak()
       curses.endwin()
+      curses.curs_set(1)
       traceback.print_exc()           # Print the exception
