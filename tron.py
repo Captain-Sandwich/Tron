@@ -47,7 +47,9 @@ def countdown():
     screen.addstr(halfy+1,halfx-2,'333333 ')
     screen.refresh()
     step()
-    time.sleep(1)
+    time.sleep(0.5)
+    step()
+    time.sleep(0.5)
     screen.addstr(halfy-3,halfx-2,' 2222  ')
     screen.addstr(halfy-2,halfx-2,'222222 ')
     screen.addstr(halfy-1,halfx-2,'    222')
@@ -55,7 +57,9 @@ def countdown():
     screen.addstr(halfy+1,halfx-2,'2222222')
     screen.refresh()
     step()
-    time.sleep(1)
+    time.sleep(0.5)
+    step()
+    time.sleep(0.5)
     screen.addstr(halfy-3,halfx-2,'   1   ')
     screen.addstr(halfy-2,halfx-2,'  111  ')
     screen.addstr(halfy-1,halfx-2,'   11  ')
@@ -159,13 +163,15 @@ def playersetup(num):
             spieler.append(Spieler(pos[i],dirs[i],i+1))
         return spieler
     else:
+        xpadding = int(size[1]/10)
+        ypadding = int(size[0]/10)
         if num >= 2:
-            spieler.append(Spieler((halfy,4),(0,1),1)) #richtung rechts, blau
-            spieler.append(Spieler((halfy,size[1]-5),(0,-1),2)) #richtung links, rot
+            spieler.append(Spieler((halfy,xpadding),(0,1),1)) #richtung rechts, blau
+            spieler.append(Spieler((halfy,size[1]-xpadding-1),(0,-1),2)) #richtung links, rot
         if num >= 3:
-            spieler.append(Spieler((4,halfx),(1,0),3))
+            spieler.append(Spieler((ypadding,halfx),(1,0),3))
         if num >= 4:
-            spieler.append(Spieler((size[0]-5,halfx),(-1,0),4))
+            spieler.append(Spieler((size[0]-ypadding-1,halfx),(-1,0),4))
         return spieler
         
 def status():
