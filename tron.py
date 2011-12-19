@@ -53,6 +53,11 @@ def countdown():
 def add(t1,t2): #tupel komponentenweise addieren
     return (t1[0]+t2[0],t1[1]+t2[1]) 
 
+class NullDevice():
+    def write(self,s):
+        pass
+sys.stderr = NullDevice() #faktisch stderr ausschalten
+
 class Spieler():
     def __init__(self,pos,direction,color):
         self.pos = pos
