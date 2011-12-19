@@ -1,22 +1,28 @@
 #!usr/bin/python3
-import curses,traceback
+import curses
+import traceback
 import random
 import time
 import threading
 import math
 import sys
 import os
+import random
+import itertools
 
 
 size = (30,79) #(y,x)
 timestep = 0.07
 minstep = 0.05
 alpha = 0.001 #Growth Factor
+random_positions = True
 keys = [ curses.KEY_UP, curses.KEY_RIGHT, curses.KEY_DOWN, curses.KEY_LEFT,
 #Spieler 1, Pfeiltasten
          119,100,115,97, #WDSA
          105,108,107,106, #ILKJ
          56,54,53,52] #numpad, numlock einschalten!!!
+    
+directions = [(-1,0),(0,1),(1,0),(0,-1)] #oben,rechts,unten,links
 
 def countdown():
     screen.addstr(halfy-3,halfx-2,'333333 ')
@@ -48,7 +54,14 @@ def countdown():
     screen.refresh()
     
 
-
+def debug(*args):
+    f = open('log','a')
+    for i in args:
+        f.write(repr(i))
+        f.write(' ')
+    f.write('\n')
+    f.flush()
+    f.close()
 
 def add(t1,t2): #tupel komponentenweise addieren
     return (t1[0]+t2[0],t1[1]+t2[1]) 
@@ -56,7 +69,7 @@ def add(t1,t2): #tupel komponentenweise addieren
 class NullDevice():
     def write(self,s):
         pass
-sys.stderr = NullDevice() #faktisch stderr ausschalten
+#sys.stderr = NullDevice() #faktisch stderr ausschalten
 
 class Spieler():
     def __init__(self,pos,direction,color):
@@ -77,15 +90,12 @@ class Spieler():
             #danach collision tests
 
     def draw(self):
-        #TODO eigentlich muss nur das neueste gemalt werden
-        #for i in self.wall:
-        #    screen.addstr(i[0],i[1], self.char,curses.color_pair(self.color))
         i = self.wall[-1]
         screen.addstr(i[0],i[1], self.char,curses.color_pair(self.color))
         
 
     def collision(self,besetzt):
-        if self.pos[0] == 0 or self.pos[0] == size[0]-1:
+        if self.pos[0] == 0 or self.pos[0] == size[0]-2:
             return True
         elif self.pos[1] == 0 or self.pos[1] == size[1]-1:
             return True
@@ -104,17 +114,48 @@ class Spieler():
                 self.direction = direction
                 self.block = True
 
+def distance(pos1,pos2):
+        return math.sqrt((pos1[0]-pos2[0])**2 + (pos1[1]-pos2[1])**2)
 
+def randomstarts(num):
+    mindistance = int(math.sqrt(size[0]*size[1]) / 5) #recht willkuerlich
+    mindistedge = int(math.sqrt(size[0]*size[1]) / 10) # auch recht willkuerlich
+    ok = False
+    while not ok:
+        positions = []
+        #koordinaten generieren
+        for i in range(num):
+            y = random.randint(mindistedge+1,size[0]-mindistedge)
+            x = random.randint(mindistedge+1,size[1]-mindistedge)
+            positions.append((y,x))
+        #koordinaten ueberpruefen
+        for i,j in itertools.combinations(positions,2):
+            if distance(i,j) < mindistance:
+                ok = False
+                break
+            else:
+                ok = True
+    dirs = [directions[random.randint(0,3)] for i in range(num)]
+    return positions,dirs
+
+    
 def playersetup(num):
     spieler = []
-    if num >= 2:
-        spieler.append(Spieler((halfy,4),(0,1),1)) #richtung rechts, blau
-        spieler.append(Spieler((halfy,size[1]-5),(0,-1),2)) #richtung links, rot
-    if num >= 3:
-        spieler.append(Spieler((4,halfx),(1,0),3))
-    if num >= 4:
-        spieler.append(Spieler((size[0]-5,halfx),(-1,0),4))
-    return spieler
+    print(num)
+    if random_positions:
+        pos,dirs = randomstarts(num)
+        for i in range(num):
+            spieler.append(Spieler(pos[i],dirs[i],i+1))
+        return spieler
+    else:
+        if num >= 2:
+            spieler.append(Spieler((halfy,4),(0,1),1)) #richtung rechts, blau
+            spieler.append(Spieler((halfy,size[1]-5),(0,-1),2)) #richtung links, rot
+        if num >= 3:
+            spieler.append(Spieler((4,halfx),(1,0),3))
+        if num >= 4:
+            spieler.append(Spieler((size[0]-5,halfx),(-1,0),4))
+        return spieler
         
 def status():
     quarterx = int(halfx/2)
@@ -151,7 +192,6 @@ def init(stdscr):
     screen = stdscr.subwin(size[0]-1,size[1],1,0)
 
 def handle_key(key):
-    directions = [(-1,0),(0,1),(1,0),(0,-1)] #oben,rechts,unten,links
     if key == 113: #q 'QUIT'
         stepper.stop()
         raise Exception
@@ -165,6 +205,7 @@ def handle_key(key):
 def main():
     global stepper
     global spieler
+    stepper = Stepper()
     screen.erase()
     screen.box()
     screen.refresh()
@@ -176,7 +217,6 @@ def main():
     for i in range(3):
         step()
     countdown()
-    stepper = Stepper()
     stepper.start()
     c = ''
     while c != 113: #113 ist q
