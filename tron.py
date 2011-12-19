@@ -1,4 +1,4 @@
-#!usr/bin/python3
+#!/usr/bin/env python3
 import curses
 import traceback
 import random
@@ -213,6 +213,7 @@ def handle_key(key):
         stepper.stop()
         raise Exception
     if key == 110 : #n 'Neues Spiel'
+        stepper.stop()
         main() 
     if key in keys:
         index = keys.index(key)
