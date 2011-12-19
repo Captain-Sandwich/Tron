@@ -75,24 +75,20 @@ class Spieler():
     def __init__(self,pos,direction,color):
         self.pos = pos
         self.direction = direction
-        self.wall = []
-        self.wall.append(self.pos)
         self.color = color
         self.char = '\u2588'
         self.alive = True
         self.block = False
 
     def step(self):
+        global besetzt
         if self.alive:
             self.pos = add(self.pos, self.direction)
-            self.wall.append(self.pos) # wachsen
+            screen.addstr(self.pos[0],self.pos[1], self.char,curses.color_pair(self.color))
+            besetzt.append(self.pos) # wachsen
             self.block = False # eine Aktion pro Step
             #danach collision tests
 
-    def draw(self):
-        i = self.wall[-1]
-        screen.addstr(i[0],i[1], self.char,curses.color_pair(self.color))
-        
 
     def collision(self,besetzt):
         if self.pos[0] == 0 or self.pos[0] == size[0]-2:
@@ -203,6 +199,7 @@ def handle_key(key):
         player.changedir(directions[index%4]) #neue Richtung setzen
 
 def main():
+    global besetzt
     global stepper
     global spieler
     stepper = Stepper()
@@ -214,6 +211,7 @@ def main():
     except IndexError:
         spieler = playersetup(2)
     status()
+    besetzt = []
     for i in range(3):
         step()
     countdown()
@@ -226,13 +224,11 @@ def main():
 def step():
     global stepper
     global spieler
+    global besetzt
     #lebende weiterlaufen lassen
     for i in spieler:
         i.step()
     #als erstes alle umbringen die in einer mauer sitzen
-    besetzt = []
-    for i in spieler:
-        besetzt.extend(i.wall)
     for i in spieler:
         if i.collision(besetzt):
             i.alive = False #Spieler stirbt
@@ -256,8 +252,6 @@ def step():
         statusline.refresh()
         stepper.stop()
 
-    for i in spieler:
-        i.draw()
     screen.refresh()
 
 class Stepper(threading.Thread):
