@@ -16,6 +16,8 @@ parser = ArgumentParser(description='play tron')
 parser.add_argument('players',help='number of players (2 to 4)', metavar='n',type=int,default=2,nargs='?')
 parser.add_argument('-t','--timestep',help='set time between steps',metavar='time',default=0.07,type=float)
 parser.add_argument('-r',help='use random starting points',action='store_true', default=False)
+parser.add_argument('-c',help='use computer opponents',action='store_true', default=False)
+parser.add_argument('-d',help='demo mode',action='store_true', default=False)
 args = parser.parse_args()
 args = vars(args)
 
@@ -26,6 +28,9 @@ if timestep < minstep:
     timestep = minstep
 random_positions = args['r']
 playernum = args['players']
+use_ai = args['c']
+demo_mode = args['d']
+print(use_ai)
 if type(playernum) == 'list':
     playernum = playernum[0]
 alpha = 0.001 #Growth Factor
@@ -98,44 +103,7 @@ def add(t1,t2): #tupel komponentenweise addieren
 class NullDevice():
     def write(self,s):
         pass
-sys.stderr = NullDevice() #faktisch stderr ausschalten
-
-class Spieler():
-    def __init__(self,pos,direction,color):
-        self.pos = pos
-        self.direction = direction
-        self.color = color
-        self.char = '\u2588'
-        self.alive = True
-        self.block = False
-
-    def step(self):
-        global besetzt
-        if self.alive:
-            self.pos = add(self.pos, self.direction)
-            screen.addstr(self.pos[0],self.pos[1], self.char,curses.color_pair(self.color))
-            besetzt.append(self.pos) # wachsen
-            self.block = False # eine Aktion pro Step
-
-    def collision(self,besetzt):
-        if self.pos[0] == 0 or self.pos[0] == size[0]-2:
-            return True
-        elif self.pos[1] == 0 or self.pos[1] == size[1]-1:
-            return True
-        elif self.pos in besetzt:
-            if besetzt.count(self.pos) > 1:
-                return True
-
-    def changedir(self,direction):
-        if not self.block:
-            #umdrehen nicht erlauben
-            if self.direction[0] == -direction[0]:
-                return False
-            elif self.direction[1] == -direction[1]:
-                return False
-            else:
-                self.direction = direction
-                self.block = True
+#sys.stderr = NullDevice() #faktisch stderr ausschalten
 
 def distance(pos1,pos2):
         return math.sqrt((pos1[0]-pos2[0])**2 + (pos1[1]-pos2[1])**2)
@@ -152,6 +120,8 @@ def randomstarts(num):
             x = random.randint(mindistedge+1,size[1]-mindistedge)
             positions.append((y,x))
         #koordinaten ueberpruefen
+        if num == 1:
+            ok = True
         for i,j in itertools.combinations(positions,2):
             if distance(i,j) < mindistance:
                 ok = False
@@ -164,11 +134,13 @@ def randomstarts(num):
     
 def playersetup(num):
     spieler = []
-    print(num)
     if random_positions:
         pos,dirs = randomstarts(num)
         for i in range(num):
-            spieler.append(Spieler(pos[i],dirs[i],i+1))
+            if (use_ai and i > 0) or demo_mode:
+                spieler.append(Survivor(pos[i],dirs[i],i+1,5))
+            else:
+                spieler.append(Spieler(pos[i],dirs[i],i+1))
         return spieler
     else:
         xpadding = int(size[1]/10)
@@ -268,7 +240,7 @@ def step():
     for i in spieler:
         if i.alive:
             alive += 1
-    if alive == 1:
+    if alive == 1 and not demo_mode:
         winner =  [i.alive for i in spieler].index(True)
         statusline.erase()
         statusline.addstr(0,0,'Spieler %s hat gewonnen' % str(winner+1), curses.color_pair(spieler[winner].color))
@@ -281,7 +253,13 @@ def step():
         statusline.addstr(0,0,'Unentschieden')
         statusline.refresh()
         stepper.stop()
-
+    elif demo_mode:
+        if alive == 1 and playernum> 1:
+            stepper.stop()
+            main()
+        elif alive == 0 and playernum==1:
+            stepper.stop()
+            main()
     screen.refresh()
 
 class Stepper(threading.Thread):
@@ -304,7 +282,104 @@ class Stepper(threading.Thread):
             time.sleep(self.timestep)
             self.counter += 1
 
-    
+class Spieler():
+    def __init__(self,pos,direction,color):
+        self.pos = pos
+        self.direction = direction
+        self.color = color
+        self.char = '\u2588'
+        self.alive = True
+        self.block = False
+
+    def step(self):
+        global besetzt
+        if self.alive:
+            self.pos = add(self.pos, self.direction)
+            screen.addstr(self.pos[0],self.pos[1], self.char,curses.color_pair(self.color))
+            besetzt.append(self.pos) # wachsen
+            self.block = False # eine Aktion pro Step
+
+    def collision(self,besetzt):
+        if self.pos[0] == 0 or self.pos[0] == size[0]-2:
+            return True
+        elif self.pos[1] == 0 or self.pos[1] == size[1]-1:
+            return True
+        elif self.pos in besetzt:
+            if besetzt.count(self.pos) > 1:
+                return True
+
+    def changedir(self,direction):
+        if not self.block:
+            #umdrehen nicht erlauben
+            if self.direction[0] == -direction[0]:
+                return False
+            elif self.direction[1] == -direction[1]:
+                return False
+            else:
+                self.direction = direction
+                self.block = True
+
+class Survivor(Spieler):
+    def __init__(self,pos,direction,color,difficulty):
+        super(Survivor,self).__init__(pos,direction,color)
+        self.diff = difficulty
+        self.counter = 0
+        self.randmove = random.randint(3,40)
+        self.color = 5
+
+    def turn(self):
+        if self.block:
+            return True
+        index = directions.index(self.direction)
+        if random.getrandbits(1):
+            index = (index +1) % 4
+        else:
+            index = (index-1) % 4
+        newdir = directions[index]
+        futurepos = add(self.pos,self.direction)
+        if self.lookahead(futurepos,1,newdir):
+            self.turn() #nicht einfach gegen eine wand fahren
+        else:
+            self.changedir(directions[index])
+            self.block = True
+
+    def debug(self,*args):
+        if spieler.index(self) == 0:
+            debug(args)
+
+    def lookahead(self,pos,distance,direction):
+        distance = distance+1
+        for i in range(1,distance):
+            vector = (direction[0]*i,direction[1]*i)
+            target = add(pos,vector)
+            if target[0] == 0 or target[1] == 0:
+                return True
+                break
+            elif target[0] == size[0]-1 or target[1] == size[1]:
+                return True
+                break
+            elif target in besetzt:
+                return True
+                break
+            else:
+                return False
+
+    def step(self):
+        self.debug(self.pos,self.direction)
+        super(Survivor,self).step()
+        self.counter += 1
+        if self.lookahead(self.pos,self.diff,self.direction):
+            self.turn()
+        if not self.block:
+            if self.counter == self.randmove:
+                self.turn()
+                self.counter = 0
+                self.randmove = random.randint(3,40)
+        else:
+            self.block = False
+
+
+
 if __name__=='__main__':
   try:
       # Initialize curses
@@ -322,6 +397,7 @@ if __name__=='__main__':
       curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
       curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
       curses.init_pair(4, curses.COLOR_GREEN, curses.COLOR_BLACK)
+      curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
       
 
       # In keypad mode, escape sequences for special keys
