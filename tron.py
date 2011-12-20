@@ -232,7 +232,7 @@ def step():
         i.step()
     #als erstes alle umbringen die in einer mauer sitzen
     for i in spieler:
-        if i.collision(besetzt):
+        if i.collision(i.pos):
             i.alive = False #Spieler stirbt
             pass
     #sieger checken
@@ -248,18 +248,18 @@ def step():
         spieler[winner].alive = False
         score[winner] += 1
         stepper.stop()
-    elif alive == 0:
-        statusline.erase()
-        statusline.addstr(0,0,'Unentschieden')
-        statusline.refresh()
-        stepper.stop()
     elif demo_mode:
         if alive == 1 and playernum> 1:
             stepper.stop()
             main()
         elif alive == 0 and playernum==1:
             stepper.stop()
-            main()
+            #main()
+    elif alive == 0:
+        statusline.erase()
+        statusline.addstr(0,0,'Unentschieden')
+        statusline.refresh()
+        stepper.stop()
     screen.refresh()
 
 class Stepper(threading.Thread):
@@ -276,11 +276,14 @@ class Stepper(threading.Thread):
 
     def run(self):
         while not self.stopped:
+            starttime = time.time()
             if self.timestep > minstep:
                 self.timestep = timestep - alpha*(time.time()-self.starttime)
             step()
             time.sleep(self.timestep)
             self.counter += 1
+            endtime = time.time()
+            debug(endtime-starttime)
 
 class Spieler():
     def __init__(self,pos,direction,color):
@@ -299,13 +302,16 @@ class Spieler():
             besetzt.append(self.pos) # wachsen
             self.block = False # eine Aktion pro Step
 
-    def collision(self,besetzt):
-        if self.pos[0] == 0 or self.pos[0] == size[0]-2:
+    def collision(self,position):
+        global besetzt
+        if position[0] == 0 or position[0] == size[0]-2:
             return True
-        elif self.pos[1] == 0 or self.pos[1] == size[1]-1:
+        elif position[1] == 0 or position[1] == size[1]-1:
             return True
-        elif self.pos in besetzt:
-            if besetzt.count(self.pos) > 1:
+        elif position in besetzt:
+            if besetzt.count(position) > 1:
+                return True
+            elif position != self.pos: #for lookahead
                 return True
 
     def changedir(self,direction):
@@ -324,57 +330,51 @@ class Survivor(Spieler):
         super(Survivor,self).__init__(pos,direction,color)
         self.diff = difficulty
         self.counter = 0
-        self.randmove = random.randint(3,40)
+        self.randmove = int(random.gauss(25,10))
         self.color = 5
 
     def turn(self):
         if self.block:
             return True
         index = directions.index(self.direction)
-        if random.getrandbits(1):
-            index = (index +1) % 4
-        else:
-            index = (index-1) % 4
-        newdir = directions[index]
-        futurepos = add(self.pos,self.direction)
-        if self.lookahead(futurepos,1,newdir):
-            self.turn() #nicht einfach gegen eine wand fahren
-        else:
-            self.changedir(directions[index])
-            self.block = True
+        a = random.choice([-1,1])
+        newindex = (index +a) % 4
+        newdir = directions[newindex]
+        futurepos = add(self.pos,newdir)
+        if self.collision(futurepos):
+            a = -a
+            newindex = (index +a) % 4
+            newdir = directions[newindex]
+
+        self.changedir(newdir)
+        self.block = True
 
     def debug(self,*args):
         if spieler.index(self) == 0:
-            debug(args)
+            debug(*args)
 
     def lookahead(self,pos,distance,direction):
         distance = distance+1
         for i in range(1,distance):
             vector = (direction[0]*i,direction[1]*i)
             target = add(pos,vector)
-            if target[0] == 0 or target[1] == 0:
-                return True
-                break
-            elif target[0] == size[0]-1 or target[1] == size[1]:
-                return True
-                break
-            elif target in besetzt:
+            if self.collision(target):
                 return True
                 break
             else:
                 return False
 
     def step(self):
-        self.debug(self.pos,self.direction)
         super(Survivor,self).step()
         self.counter += 1
         if self.lookahead(self.pos,self.diff,self.direction):
             self.turn()
         if not self.block:
             if self.counter == self.randmove:
-                self.turn()
+                if random.getrandbits(1):
+                    self.turn()
                 self.counter = 0
-                self.randmove = random.randint(3,40)
+                self.randmove = int(random.gauss(25,10))
         else:
             self.block = False
 
