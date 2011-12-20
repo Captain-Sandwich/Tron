@@ -213,7 +213,7 @@ def main():
     except IndexError:
         spieler = playersetup(2)
     status()
-    besetzt = []
+    besetzt = set([])
     #for i in range(3):
     #    step()
     countdown()
@@ -231,10 +231,10 @@ def step():
     for i in spieler:
         i.step()
     #als erstes alle umbringen die in einer mauer sitzen
-    for i in spieler:
-        if i.collision(i.pos):
-            i.alive = False #Spieler stirbt
-            pass
+#    for i in spieler:
+#        if i.collision(i.pos):
+#            i.alive = False #Spieler stirbt
+#            pass
     #sieger checken
     alive = 0 #lebende Spieler checken
     for i in spieler:
@@ -276,14 +276,11 @@ class Stepper(threading.Thread):
 
     def run(self):
         while not self.stopped:
-            starttime = time.time()
             if self.timestep > minstep:
                 self.timestep = timestep - alpha*(time.time()-self.starttime)
             step()
             time.sleep(self.timestep)
             self.counter += 1
-            endtime = time.time()
-            debug(endtime-starttime)
 
 class Spieler():
     def __init__(self,pos,direction,color):
@@ -299,7 +296,9 @@ class Spieler():
         if self.alive:
             self.pos = add(self.pos, self.direction)
             screen.addstr(self.pos[0],self.pos[1], self.char,curses.color_pair(self.color))
-            besetzt.append(self.pos) # wachsen
+            if self.collision(self.pos):
+                self.alive = False
+            besetzt.add(self.pos) # wachsen
             self.block = False # eine Aktion pro Step
 
     def collision(self,position):
@@ -309,10 +308,7 @@ class Spieler():
         elif position[1] == 0 or position[1] == size[1]-1:
             return True
         elif position in besetzt:
-            if besetzt.count(position) > 1:
-                return True
-            elif position != self.pos: #for lookahead
-                return True
+            return True
 
     def changedir(self,direction):
         if not self.block:
