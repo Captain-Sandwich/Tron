@@ -216,8 +216,15 @@ def main():
         spieler = playersetup(2)
     status()
     besetzt = set([])
-    #for i in range(3):
-    #    step()
+    #rand in besetzt schreiben
+    for i in range(size[1]):
+        besetzt.add((0,i))
+        besetzt.add((size[0]-2,i))
+    for i in range(size[0]-1):
+        besetzt.add((i,0))
+        besetzt.add((i,size[1]-1))
+    for i in besetzt:
+        debug(*i)
     countdown()
     stepper.start()
     c = ''
@@ -305,11 +312,7 @@ class Spieler():
 
     def collision(self,position):
         global besetzt
-        if position[0] == 0 or position[0] == size[0]-2:
-            return True
-        elif position[1] == 0 or position[1] == size[1]-1:
-            return True
-        elif position in besetzt:
+        if position in besetzt:
             return True
 
     def changedir(self,direction):
