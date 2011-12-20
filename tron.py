@@ -110,7 +110,8 @@ def distance(pos1,pos2):
 
 def randomstarts(num):
     mindistance = int(math.sqrt(size[0]*size[1]) / 5) #recht willkuerlich
-    mindistedge = int(math.sqrt(size[0]*size[1]) / 5) # auch recht willkuerlich
+    a = max(5,playernum)
+    mindistedge = int(math.sqrt(size[0]*size[1]) / a) # auch recht willkuerlich
     ok = False
     while not ok:
         positions = []
@@ -155,15 +156,16 @@ def playersetup(num):
         return spieler
         
 def status():
-    quarterx = int(halfx/2)
-    pos = 0
-    counter = 1
-    statusline.erase()
-    for i in spieler:
-        statusline.addstr(0,pos,'Spieler %d:    %4d' % (counter,score[counter-1]),curses.color_pair(i.color))
-        statusline.refresh()
-        counter +=1
-        pos += quarterx
+    if playernum <= 4:
+        quarterx = int(halfx/2)
+        pos = 0
+        counter = 1
+        statusline.erase()
+        for i in spieler:
+            statusline.addstr(0,pos,'Spieler %d:    %4d' % (counter,score[counter-1]),curses.color_pair(i.color))
+            statusline.refresh()
+            counter +=1
+            pos += quarterx
         
 def init(stdscr):
     global size
