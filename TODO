@@ -5,6 +5,8 @@
 		draw
 		refresh oder dummy refresh
 		getch
+		eine möglichkeit die spielfeldgröße zu melden
+		eine start methode
 	möglich vllt:
 		gtk
 		wx widgets
