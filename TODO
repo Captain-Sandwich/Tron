@@ -1,0 +1,11 @@
+-Backend modularisieren:
+	Backend muss bereit stellen:
+		countdown
+		status
+		draw
+		refresh oder dummy refresh
+		getch
+	möglich vllt:
+		gtk
+		wx widgets
+		pygame
