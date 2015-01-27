@@ -297,6 +297,7 @@ class Spieler():
         self.direction = direction
         self.color = color
         self.char = '\u2588'
+        self.char = 'O'
         self.alive = True
         self.block = False
 
@@ -328,7 +329,7 @@ class Spieler():
 
 class Survivor(Spieler):
     def __init__(self,pos,direction,color,difficulty):
-        super(Survivor,self).__init__(pos,direction,color)
+        Spieler.__init__(self, pos,direction,color)
         self.diff = difficulty
         self.counter = 0
         self.randmove = int(random.gauss(25,10))
@@ -366,7 +367,7 @@ class Survivor(Spieler):
                 return False
 
     def step(self):
-        super(Survivor,self).step()
+        Spieler.step(self)
         self.counter += 1
         if self.lookahead(self.pos,self.diff,self.direction):
             self.turn()
